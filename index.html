@@ -63,6 +63,8 @@ textarea{min-height:84px;resize:vertical}
 input[type=checkbox]{width:auto}
 .bar .f{width:auto}
 .bar input,.bar select{width:auto}
+.bar .f.grow{min-width:min(260px,100%)}
+.bar .f.grow input{width:100%}
 .btn{font:600 13px var(--f-body);padding:8px 14px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;white-space:nowrap}
 .btn:hover{background:var(--surface2)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
@@ -148,6 +150,11 @@ img{max-width:100%}
 .gate .seal{font:700 26px var(--f-display);text-transform:uppercase;letter-spacing:.03em;line-height:1.05;margin:0 0 4px}
 .gate .seal i{font-style:normal;color:var(--accent)}
 .gate form{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.logo{display:block;flex:none;border-radius:50%}
+.logo.hdr{width:48px;height:48px}
+.logo.big{width:104px;height:104px;margin:0 auto 10px}
+#gLogin .seal,#gLogin .card > .note{text-align:center}
+@media (max-width:520px){.logo.hdr{width:38px;height:38px}}
 .err{color:var(--err);font-size:13px;min-height:1em}
 .userbox{display:flex;align-items:center;gap:8px}
 .userbox .btn{padding:4px 10px;font-size:12px;background:transparent;color:var(--ink-fg);border-color:rgba(255,255,255,.3)}
@@ -156,6 +163,7 @@ img{max-width:100%}
 </head>
 <body>
 <header class="top"><div class="wrap">
+  <img class="logo hdr" data-logo alt="Escudo Bomberos Voluntarios Río Frío">
   <div class="brand"><b>Bomberos Río Frío <i>·</i> Emergencias</b><span id="instName">Registro de emergencias atendidas</span></div>
   <span class="pill" id="rolePill" hidden></span>
   <span class="pill sync-wait" id="syncPill">Conectando</span>
@@ -169,6 +177,7 @@ img{max-width:100%}
 </div></div>
 
 <div class="wrap gate" id="gLogin" hidden><div class="card">
+  <img class="logo big" data-logo alt="Escudo Bomberos Voluntarios Río Frío">
   <p class="seal">Bomberos Río Frío<br><i>Registro de emergencias</i></p>
   <p class="note">Ingrese con su número de cédula (o su correo, si es administrador) y su contraseña.</p>
   <form id="loginForm" novalidate>
@@ -251,8 +260,8 @@ img{max-width:100%}
       </fieldset>
       <fieldset><legend>Clasificación</legend>
         <div class="g">
-          <label class="f w2"><span>Tipo de emergencia <em>*</em></span><select id="f_tipo"></select></label>
-          <label class="f w2"><span>Detalle del evento</span><input id="f_tipoDet" placeholder="Ej.: incendio en cocina de vivienda de un piso"></label>
+          <label class="f w2"><span>Tipo de emergencia <em>*</em></span><select id="f_cat"></select></label>
+          <label class="f w2"><span>Detalle del evento <em>*</em></span><select id="f_tipo"><option value="">Primero elija el tipo de emergencia</option></select></label>
         </div>
       </fieldset>
       <fieldset><legend>Ubicación</legend>
@@ -366,19 +375,16 @@ const FIREBASE_CONFIG = {
 };
 </script>
 <script>
+const LOGO=""; /* Pegar aquí el escudo de Río Frío en base64 (data:image/png;base64,...) */
+document.querySelectorAll("img[data-logo]").forEach(i=>{ if(LOGO) i.src=LOGO; else i.remove(); });
+</script>
+<script>
 (function(){
 "use strict";
 /* ---------- constantes ---------- */
 const MEDIOS=["Línea 119","Línea 123","Llamada a la estación","Presencial en la estación","Radio","WhatsApp / mensajería","Otro"];
 const ENTIDADES=["Policía Nacional","Defensa Civil","Cruz Roja","Ejército Nacional","Agentes de tránsito","Ambulancia / IPS","CVC","Gestión del Riesgo municipal","Otro cuerpo de bomberos","Empresa de servicios públicos"];
-const TIPOS_SUGERIDOS=[
- ["INC-EST","Incendio estructural","Incendios"],["INC-VEH","Incendio vehicular","Incendios"],["INC-CV","Incendio de cobertura vegetal","Incendios"],["INC-OTR","Otro incendio (basuras, eléctrico)","Incendios"],
- ["RES-VEH","Accidente de tránsito / rescate vehicular","Rescates"],["RES-ALT","Rescate en alturas","Rescates"],["RES-ACU","Rescate acuático","Rescates"],["RES-EST","Rescate en estructuras o espacios confinados","Rescates"],["RES-ANI","Rescate de animales","Rescates"],
- ["MAT-GAS","Fuga de gas","Materiales peligrosos"],["MAT-DER","Derrame de sustancias peligrosas","Materiales peligrosos"],
- ["NAT-INU","Inundación","Eventos naturales"],["NAT-VEN","Vendaval","Eventos naturales"],["NAT-DES","Deslizamiento / movimiento en masa","Eventos naturales"],["NAT-ARB","Caída de árboles","Eventos naturales"],
- ["APH","Atención prehospitalaria","Atención prehospitalaria"],
- ["SER-ABE","Control de abejas, avispas e insectos","Servicios"],["SER-INS","Revisión / inspección técnica","Servicios"],["SER-APO","Apoyo institucional / prevención en eventos","Servicios"],["SER-AGU","Suministro de agua","Servicios"],
- ["FAL","Falsa alarma","Otros"],["OTR","Otro","Otros"]];
+const TIPOS_SUGERIDOS=[["INC-01", "Incendio estructural", "Gestión del riesgo de incendios"],["INC-02", "Incendio forestal rural", "Gestión del riesgo de incendios"],["INC-03", "Incendio forestal urbano", "Gestión del riesgo de incendios"],["INC-04", "Incendio agrícola", "Gestión del riesgo de incendios"],["INC-05", "Incendio vehicular", "Gestión del riesgo de incendios"],["INC-06", "Incendio de líquidos inflamables", "Gestión del riesgo de incendios"],["INC-07", "Incendio de gases o gas domiciliario", "Gestión del riesgo de incendios"],["INC-08", "Incendio en cilindro de gas vehicular", "Gestión del riesgo de incendios"],["INC-09", "Incendio", "Gestión del riesgo de incendios"],["INC-10", "Incendio eléctrico", "Gestión del riesgo de incendios"],["INC-11", "Incendio aéreo", "Gestión del riesgo de incendios"],["INC-12", "Fuegos aislados o basuras", "Gestión del riesgo de incendios"],["RES-01", "Rescates (actividad) en accidentes de tránsito", "Rescate en todas sus modalidades"],["RES-02", "Accidentes de tránsito atendidos sin la actividad de rescate", "Rescate en todas sus modalidades"],["RES-03", "Otros rescates de emergencias diferentes a accidente de tránsito", "Rescate en todas sus modalidades"],["RES-04", "Salvamento en mina", "Rescate en todas sus modalidades"],["RES-05", "Rescate de animal", "Rescate en todas sus modalidades"],["RES-06", "Auxilio a electrocutado", "Rescate en todas sus modalidades"],["RES-07", "Rescate en ascensor", "Rescate en todas sus modalidades"],["RES-08", "Rescate con apertura de puerta", "Rescate en todas sus modalidades"],["RES-09", "Rescate acuático", "Rescate en todas sus modalidades"],["RES-10", "Rescate en estructura colapsada", "Rescate en todas sus modalidades"],["RES-11", "Rescate en altura", "Rescate en todas sus modalidades"],["RES-12", "Rescate en espacio confinado", "Rescate en todas sus modalidades"],["RES-13", "Rescate en accidente aéreo", "Rescate en todas sus modalidades"],["RES-14", "Rescate en media y alta montaña", "Rescate en todas sus modalidades"],["RES-15", "Rescate con exposición de materiales peligrosos", "Rescate en todas sus modalidades"],["MAT-01", "Incidentes con materiales peligrosos en vehículos accidentados", "Atención de materiales peligrosos"],["MAT-02", "Incidente de materiales peligrosos (otros)", "Atención de materiales peligrosos"],["MAT-03", "Fuga de gas GLP", "Atención de materiales peligrosos"],["MAT-04", "Fuga de gas GN", "Atención de materiales peligrosos"],["MAT-05", "Derrames de combustible en vía pública", "Atención de materiales peligrosos"],["OEM-01", "Colapsos en estructura", "Atención de otras emergencias"],["OEM-02", "Derrumbes y deslizamientos", "Atención de otras emergencias"],["OEM-03", "Explosiones por pólvora", "Atención de otras emergencias"],["OEM-04", "Explosiones de ollas a presión", "Atención de otras emergencias"],["OEM-05", "Otras explosiones", "Atención de otras emergencias"],["OEM-06", "Inundaciones atendidas", "Atención de otras emergencias"],["OEM-07", "Caídas de árboles, postes de energía y otros", "Atención de otras emergencias"],["OEM-08", "Atención de abejas", "Atención de otras emergencias"],["OEM-09", "Recuperación de cadáver", "Atención de otras emergencias"],["OEM-10", "Vendaval", "Atención de otras emergencias"],["OEM-11", "Otras emergencias atendidas no descritas", "Atención de otras emergencias"],["APH-01", "Atención APH de heridos en accidente de tránsito", "Atención prehospitalaria"],["APH-02", "Transporte de heridos en accidente de tránsito", "Atención prehospitalaria"],["APH-03", "Atención APH de heridos diferente a accidente de tránsito", "Atención prehospitalaria"],["APH-04", "Transporte de heridos diferente a accidente de tránsito", "Atención prehospitalaria"],["APH-05", "Auxilio a enfermo", "Atención prehospitalaria"],["APH-06", "Trabajo de parto", "Atención prehospitalaria"],["APH-07", "Traslado de paciente", "Atención prehospitalaria"],["PRE-01", "Inspecciones de prevención y seguridad", "Labores de prevención y otros"],["PRE-02", "Realización de pruebas hidráulicas", "Labores de prevención y otros"],["PRE-03", "Participación en eventos masivos y no masivos", "Labores de prevención y otros"],["PRE-04", "Participación en eventos pirotécnicos", "Labores de prevención y otros"],["PRE-05", "Labores sociales", "Labores de prevención y otros"],["PRE-06", "Labores de prevención diversas", "Labores de prevención y otros"],["PRE-07", "Falsas alarmas por diversos casos", "Labores de prevención y otros"],["PRE-08", "Actividades de evacuaciones", "Labores de prevención y otros"],["PRE-09", "Suministro de agua a comunidades u otros", "Labores de prevención y otros"],["PRE-10", "Desplazamiento sin intervención", "Labores de prevención y otros"]];
 const VEHICULOS_INICIALES=[]; /* Flota de Río Frío: registrarla en Catálogos → Vehículos */
 const GENERAL_INICIAL={institucion:"Cuerpo de Bomberos Voluntarios de Riofrío",municipio:"Riofrío",departamento:"Valle del Cauca"};
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -395,7 +401,7 @@ const emailDe=s=>esCedula(s)?soloDig(s)+"@"+DOM_CED:String(s||"").trim().toLower
 let UID=null, MYDOC=null, ROLE="consulta";
 let EMERG=[], PERSONAL=[], AUD=[], USERS=[], CFG={general:{},tipos:{items:[]},vehiculos:{items:[]},sectores:{items:[]}};
 let TAB="lista", DETAIL=null, EDIT_ID=null, EDIT_BASE=null, EDIT_DOC=null, VROWS=[];
-let LIMIT_HIT=false, emLoaded=false, UNSUB=[], CAT_DRAFT={}, IMPORT=null;
+let LIMIT_HIT=false, emLoaded=false, UNSUB=[], CAT_DRAFT={}, IMPORT=null, VIMPORT=null;
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -428,7 +434,7 @@ function titulo(s){ return String(s||"").replace(/\s+/g," ").trim().toLowerCase(
 function validar(e,cerrar){
   const E=[],W=[];
   if(!e.aviso) E.push("Falta la fecha y hora del aviso.");
-  if(!e.tipo) E.push("Falta el tipo de emergencia.");
+  if(!e.tipo) E.push("Falta el tipo de emergencia y el detalle del evento.");
   const seq=[["aviso","Aviso"],["salida","Salida"],["llegada","Llegada"],["controlado","Controlada"],["fin","Regreso"]];
   for(let i=0;i<seq.length;i++) for(let j=i+1;j<seq.length;j++){
     const a=e[seq[i][0]], b=e[seq[j][0]];
@@ -448,7 +454,7 @@ function validar(e,cerrar){
   if(cerrar){
     if(!e.sector&&!e.direccion) E.push("Para cerrar: indique barrio/vereda o dirección.");
     if(!e.salida) E.push("Para cerrar: falta la hora de salida.");
-    if(!e.llegada && e.tipo!=="FAL") E.push("Para cerrar: falta la hora de llegada al sitio.");
+    if(!e.llegada && !["FAL","PRE-07"].includes(e.tipo)) E.push("Para cerrar: falta la hora de llegada al sitio.");
     if(!e.fin) E.push("Para cerrar: falta la hora de regreso a la estación.");
     if(!e.comandante) E.push("Para cerrar: falta el comandante u oficial a cargo.");
     if(!vs.length && !(e.personal||[]).length) E.push("Para cerrar: registre al menos un vehículo o una persona.");
@@ -554,15 +560,32 @@ $("bBtn").onclick=async()=>{
   }catch(e){ $("bErr").textContent=errMsg(e); $("bBtn").disabled=false; }
 };
 
+let AUTO_TIP=false;
+async function autoTipologia(){
+  // Actualiza sola la tipología a las 6 categorías del SYRAP si todavía está la lista inicial
+  if(AUTO_TIP||!isAdmin()) return;
+  const nuevos=TIPOS_SUGERIDOS.map(([codigo,nombre,grupo])=>({codigo,nombre,grupo,activo:true}));
+  const act=items("tipos"); if(nuevos.every(n=>act.some(o=>o.codigo===n.codigo))) return;
+  AUTO_TIP=true;
+  try{
+    const usados=new Set(EMERG.map(e=>e.tipo).filter(Boolean));
+    try{ (await db.collection("emergencias").limit(1000).get()).docs.forEach(d=>{ const t=d.data().tipo; if(t) usados.add(t); }); }catch(_){}
+    const viejos=act.filter(o=>!nuevos.some(n=>n.codigo===o.codigo));
+    const conservar=viejos.filter(o=>usados.has(o.codigo)).map(o=>({...o,activo:false}));
+    const b=db.batch(); b.set(db.collection("cfg").doc("tipos"),{items:[...nuevos,...conservar],actualizadoEn:sts(),actualizadoPor:UID});
+    b.set(db.collection("auditoria_admin").doc(),{uid:UID,ts:sts(),accion:"Catálogo",detalle:`Tipología actualizada automáticamente a 6 categorías (${nuevos.length} detalles); ${conservar.length} anteriores desactivados por estar en uso`});
+    await b.commit(); toast("Tipos de emergencia actualizados a las 6 categorías del SYRAP.");
+  }catch(e){ AUTO_TIP=false; toast("No se pudo actualizar la tipología: "+errMsg(e)); }
+}
 function startData(){
   UNSUB.slice(1).forEach(f=>{ try{f();}catch(_){} }); UNSUB=UNSUB.slice(0,1);
   const fail=e=>{
     if(e&&e.code==="permission-denied"&&(startData._r||0)<3){ startData._r=(startData._r||0)+1; clearTimeout(startData._t); startData._t=setTimeout(()=>{ $("dbBanner").hidden=true; startData(); render(); },2500); sync("wait","Reconectando…"); return; }
     sync("err","Error de conexión"); $("dbBanner").hidden=false; $("dbBanner").textContent=errMsg(e)+" Recargue la página (F5).";
   };
-  UNSUB.push(db.collection("cfg").onSnapshot(s=>{ startData._r=0; $("dbBanner").hidden=true; s.docs.forEach(d=>CFG[d.id]=d.data()); fillTipoFilter(); sync("ok","Sincronizado"); if(TAB!=="form"&&!(TAB==="cat"&&Object.keys(CAT_DRAFT).length)) render(); },fail));
-  UNSUB.push(db.collection("personal").onSnapshot(s=>{ PERSONAL=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")); if(TAB!=="form"&&!(TAB==="cat"&&(CAT_DRAFT.personal||IMPORT))) render(); },fail));
-  UNSUB.push(db.collection("emergencias").orderBy("aviso","desc").limit(1000).onSnapshot(s=>{ EMERG=s.docs.map(d=>({id:d.id,...d.data({serverTimestamps:"estimate"})})); LIMIT_HIT=s.size>=1000; emLoaded=true; sync(s.metadata.fromCache?"wait":"ok",s.metadata.fromCache?"Sin conexión (datos guardados)":"Sincronizado"); if(TAB!=="form"&&TAB!=="cat"&&TAB!=="users") render(); },fail));
+  UNSUB.push(db.collection("cfg").onSnapshot({includeMetadataChanges:true},s=>{ startData._r=0; $("dbBanner").hidden=true; s.docs.forEach(d=>CFG[d.id]=d.data()); fillTipoFilter(); sync("ok","Sincronizado"); if(!s.metadata.fromCache&&!s.metadata.hasPendingWrites) autoTipologia(); if(TAB!=="form"&&!(TAB==="cat"&&Object.keys(CAT_DRAFT).length)) render(); },fail));
+  UNSUB.push(db.collection("personal").onSnapshot(s=>{ PERSONAL=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")); if(TAB!=="form"&&!((TAB==="cat"||TAB==="users")&&(CAT_DRAFT.personal||IMPORT))) render(); },fail));
+  UNSUB.push(db.collection("emergencias").orderBy("aviso","desc").limit(1000).onSnapshot({includeMetadataChanges:true},s=>{ EMERG=s.docs.map(d=>({id:d.id,...d.data({serverTimestamps:"estimate"})})); LIMIT_HIT=s.size>=1000; emLoaded=true; sync(s.metadata.fromCache?"wait":"ok",s.metadata.fromCache?"Sin conexión (datos guardados)":"Sincronizado"); if(TAB!=="form"&&TAB!=="cat"&&TAB!=="users") render(); },fail));
   UNSUB.push(db.collection("auditoria").orderBy("ts","desc").limit(1000).onSnapshot(s=>{ AUD=s.docs.map(d=>({id:d.id,...d.data({serverTimestamps:"estimate"})})); if(TAB==="hist"||(TAB==="lista"&&DETAIL)) render(); },()=>{}));
   if(isAdmin()) UNSUB.push(db.collection("usuarios").onSnapshot(s=>{ USERS=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")); if(TAB==="users") renderUsers(); },()=>{}));
 }
@@ -591,10 +614,10 @@ function renderList(){
   const dupNums={}; EMERG.forEach(e=>{ if(e.numero) dupNums[e.numero]=(dupNums[e.numero]||0)+1; });
   if(!EMERG.length){ w.innerHTML=`<div class="empty"><b>Aún no hay emergencias registradas</b>${canWrite()?'Use «Nuevo reporte» para registrar la primera. El número consecutivo se asigna al guardar (AAAA-0001).':'Cuando el personal registre emergencias aparecerán aquí.'}</div>`; $("listFoot").textContent=""; return; }
   if(!L.length){ w.innerHTML='<div class="empty"><b>Ningún reporte coincide</b>Ajuste los filtros.</div>'; }
-  else w.innerHTML=`<table class="t"><thead><tr><th>N°</th><th>Aviso</th><th>Tipo</th><th>Ubicación</th><th class="r">Respuesta</th><th>Comandante</th><th>Estado</th></tr></thead><tbody>${L.map(e=>{
+  else w.innerHTML=`<table class="t"><thead><tr><th>N°</th><th>Aviso</th><th>Detalle del evento</th><th>Ubicación</th><th class="r">Respuesta</th><th>Comandante</th><th>Estado</th></tr></thead><tbody>${L.map(e=>{
     const t=tipoOf(e.tipo,e), tm=tiempos(e); const v=e.estado==="anulada"?{E:[],W:[]}:validar(e,e.estado==="cerrada");
     const flag=(dupNums[e.numero]>1?'<div class="flag">Número duplicado</div>':'')+(v.E.length?`<div class="flag">${v.E.length} inconsistencia(s)</div>`:'');
-    return `<tr class="click ${e.estado==="anulada"?"anulada":""}" data-id="${esc(e.id)}"><td class="mono">${esc(e.numero||"—")}</td><td class="mono">${esc(fmtDT(e.aviso))}</td><td>${esc(t?t.nombre:"—")}${e.tipoDetalle?`<div class="note" style="margin:0">${esc(e.tipoDetalle)}</div>`:""}</td><td>${esc([e.sector,e.direccion].filter(Boolean).join(" · ")||"—")}</td><td class="r mono">${esc(fmtMin(tm.respuesta))}</td><td>${esc(e.comandante?perName(e.comandante,e):"—")}</td><td><span class="chip st-${e.estado}">${EST_LBL[e.estado]||e.estado}</span>${flag}</td></tr>`;}).join("")}</tbody></table>`;
+    return `<tr class="click ${e.estado==="anulada"?"anulada":""}" data-id="${esc(e.id)}"><td class="mono">${esc(e.numero||"—")}</td><td class="mono">${esc(fmtDT(e.aviso))}</td><td>${esc(t?t.nombre:"—")}${t&&t.grupo?`<div class="note" style="margin:0">${esc(t.grupo)}</div>`:""}</td><td>${esc([e.sector,e.direccion].filter(Boolean).join(" · ")||"—")}</td><td class="r mono">${esc(fmtMin(tm.respuesta))}</td><td>${esc(e.comandante?perName(e.comandante,e):"—")}</td><td><span class="chip st-${e.estado}">${EST_LBL[e.estado]||e.estado}</span>${flag}</td></tr>`;}).join("")}</tbody></table>`;
   const c={abierta:0,cerrada:0,anulada:0}; L.forEach(e=>c[e.estado]=(c[e.estado]||0)+1);
   $("listFoot").textContent=`${L.length} de ${EMERG.length} reportes · ${c.abierta} abiertos · ${c.cerrada} cerrados · ${c.anulada} anulados`+(LIMIT_HIT?" · Se muestran los 1.000 avisos más recientes.":"");
 }
@@ -613,7 +636,7 @@ function fichaHTML(e){
   <dl class="kv">
     ${kv("Aviso",`<span class="mono">${esc(fmtDT(e.aviso))}</span>`)}${kv("Medio de aviso",esc(e.medio||"—"))}
     ${kv("Quién reporta",esc([e.reportaNombre,e.reportaTel].filter(Boolean).join(" · ")||"—"))}${kv("Recibido por",esc(e.recibe?perName(e.recibe,e):"—"))}
-    ${kv("Detalle",esc(e.tipoDetalle||"—"))}${kv("Zona",esc(e.zona||"—"))}
+    ${kv("Tipo de emergencia",esc(t?t.grupo:"—"))}${kv("Detalle del evento",esc(t?t.nombre:"—"))}${e.tipoDetalle?kv("Nota del evento",esc(e.tipoDetalle)):""}${kv("Zona",esc(e.zona||"—"))}
     ${kv("Barrio / vereda",esc(e.sector||"—"))}${kv("Dirección",esc(e.direccion||"—"))}
     ${kv("Referencia",esc(e.referencia||"—"))}${kv("Coordenadas",esc(e.coord||"—"))}${kv("Municipio",esc(e.municipio||"—"))}
   </dl>
@@ -680,20 +703,21 @@ async function cambiarEstado(e,estado,accion,motivo){
 function informeHTML(e){
   const g=CFG.general||{};
   const css=`body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;margin:24px;max-width:900px}h1{font-size:18px;margin:0}h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#555;margin:0 0 6px}.ficha-h{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0}.ficha-h .n{font-size:22px;font-weight:bold}.chip{border:1px solid #333;border-radius:10px;padding:1px 8px;font-size:11px}.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px;margin:0}.kv dt{font-size:10px;text-transform:uppercase;color:#666}.kv dd{margin:0}.fsec{border-top:1px solid #bbb;padding-top:8px;margin-top:10px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:4px 6px;text-align:left}.txt{white-space:pre-wrap;margin:0}.banner{border:1px solid #a00;padding:6px}.note{color:#666}.firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:60px}.firmas div{border-top:1px solid #000;padding-top:4px;text-align:center}@media print{body{margin:0}}`;
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe ${esc(e.numero)}</title><style>${css}</style></head><body><h1>${esc(g.institucion||"Cuerpo de Bomberos")}</h1><div class="note">${esc([g.municipio,g.departamento].filter(Boolean).join(" · "))} — Informe de emergencia atendida</div>${fichaHTML(e)}<div class="firmas"><div>${esc(e.comandante?perName(e.comandante,e):"")}<br>Comandante / oficial a cargo</div><div>Revisó</div></div><p class="note" style="margin-top:24px">Generado el ${esc(fmtTS(new Date()))} por ${esc(MYDOC&&MYDOC.nombre||"")}. Última modificación del reporte: ${esc(fmtTS(e.actualizadoEn))} (versión ${e.version||1}).</p></body></html>`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe ${esc(e.numero)}</title><style>${css}</style></head><body><div style="display:flex;gap:14px;align-items:center">${LOGO?`<img src="${LOGO}" alt="" style="width:72px;height:72px">`:""}<div><h1>${esc(g.institucion||"Cuerpo de Bomberos")}</h1><div class="note">${esc([g.municipio,g.departamento].filter(Boolean).join(" · "))} — Informe de emergencia atendida</div></div></div>${fichaHTML(e)}<div class="firmas"><div>${esc(e.comandante?perName(e.comandante,e):"")}<br>Comandante / oficial a cargo</div><div>Revisó</div></div><p class="note" style="margin-top:24px">Generado el ${esc(fmtTS(new Date()))} por ${esc(MYDOC&&MYDOC.nombre||"")}. Última modificación del reporte: ${esc(fmtTS(e.actualizadoEn))} (versión ${e.version||1}).</p></body></html>`;
 }
 
 /* ---------- formulario ---------- */
-const FIELDS={aviso:"f_aviso",medio:"f_medio",reportaNombre:"f_repNom",reportaTel:"f_repTel",recibe:"f_recibe",tipo:"f_tipo",tipoDetalle:"f_tipoDet",zona:"f_zona",sector:"f_sector",direccion:"f_dir",referencia:"f_ref",coord:"f_coord",municipio:"f_mun",salida:"f_salida",llegada:"f_llegada",controlado:"f_control",fin:"f_fin",comandante:"f_cmd",personalOtro:"f_pOtro",entidadOtra:"f_eOtra",descripcion:"f_desc",acciones:"f_acc",observaciones:"f_obs"};
+const FIELDS={aviso:"f_aviso",medio:"f_medio",reportaNombre:"f_repNom",reportaTel:"f_repTel",recibe:"f_recibe",tipo:"f_tipo",zona:"f_zona",sector:"f_sector",direccion:"f_dir",referencia:"f_ref",coord:"f_coord",municipio:"f_mun",salida:"f_salida",llegada:"f_llegada",controlado:"f_control",fin:"f_fin",comandante:"f_cmd",personalOtro:"f_pOtro",entidadOtra:"f_eOtra",descripcion:"f_desc",acciones:"f_acc",observaciones:"f_obs"};
 const NUMS={les:"f_les",fal:"f_fal",res:"f_res",eva:"f_eva",fam:"f_fam",viv:"f_viv",area:"f_area"};
-const LABELS={aviso:"aviso",medio:"medio",reportaNombre:"quién reporta",reportaTel:"teléfono",recibe:"recibido por",tipo:"tipo",tipoDetalle:"detalle",zona:"zona",sector:"barrio/vereda",direccion:"dirección",referencia:"referencia",coord:"coordenadas",municipio:"municipio",salida:"salida",llegada:"llegada",controlado:"controlada",fin:"regreso",comandante:"comandante",personalOtro:"otro personal",entidadOtra:"otra entidad",descripcion:"situación",acciones:"acciones",observaciones:"observaciones",vehiculos:"vehículos",personal:"personal",entidades:"entidades",afect:"afectación",agua:"agua",espuma:"espuma"};
+const LABELS={aviso:"aviso",medio:"medio",reportaNombre:"quién reporta",reportaTel:"teléfono",recibe:"recibido por",tipo:"tipo/detalle del evento",zona:"zona",sector:"barrio/vereda",direccion:"dirección",referencia:"referencia",coord:"coordenadas",municipio:"municipio",salida:"salida",llegada:"llegada",controlado:"controlada",fin:"regreso",comandante:"comandante",personalOtro:"otro personal",entidadOtra:"otra entidad",descripcion:"situación",acciones:"acciones",observaciones:"observaciones",vehiculos:"vehículos",personal:"personal",entidades:"entidades",afect:"afectación",agua:"agua",espuma:"espuma"};
 const numOrNull=v=>{ if(v===""||v==null) return null; const n=Number(v); return isFinite(n)?n:null; };
 function perOptions(sel,cur){ const ps=PERSONAL.filter(p=>p.activo!==false||p.id===cur); sel.innerHTML='<option value="">—</option>'+ps.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}${p.cargo?" · "+esc(p.cargo):""}</option>`).join(""); if(cur&&!ps.some(p=>p.id===cur)) sel.insertAdjacentHTML("beforeend",`<option value="${esc(cur)}">${esc(perName(cur,EDIT_DOC))}</option>`); sel.value=cur||""; }
 function buildFormOptions(e){
   $("f_medio").innerHTML='<option value="">—</option>'+MEDIOS.map(m=>`<option>${esc(m)}</option>`).join("");
   const ts=items("tipos").filter(t=>t.activo!==false||t.codigo===(e&&e.tipo)); const groups=[...new Set(ts.map(t=>t.grupo))];
-  $("f_tipo").innerHTML='<option value="">Seleccione…</option>'+groups.map(g=>`<optgroup label="${esc(g)}">${ts.filter(t=>t.grupo===g).map(t=>`<option value="${esc(t.codigo)}">${esc(t.nombre)}</option>`).join("")}</optgroup>`).join("");
-  if(e&&e.tipo&&!ts.some(t=>t.codigo===e.tipo)) $("f_tipo").insertAdjacentHTML("beforeend",`<option value="${esc(e.tipo)}">${esc(tipoOf(e.tipo,e).nombre)}</option>`);
+  const cur=e&&e.tipo?tipoOf(e.tipo,e):null; const gSel=cur?cur.grupo:"";
+  $("f_cat").innerHTML='<option value="">Seleccione…</option>'+groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join("")+(gSel&&!groups.includes(gSel)?`<option value="${esc(gSel)}">${esc(gSel)}</option>`:"");
+  $("f_cat").value=gSel; fillDetalle(gSel,e&&e.tipo,e);
   $("dlSector").innerHTML=items("sectores").filter(s=>s.activo!==false).map(s=>`<option value="${esc(s.nombre)}">${esc(s.zona||"")}</option>`).join("");
   perOptions($("f_recibe"),e&&e.recibe); perOptions($("f_cmd"),e&&e.comandante);
   const sel=new Set((e&&e.personal)||[]); const ps=PERSONAL.filter(p=>p.activo!==false||sel.has(p.id));
@@ -702,6 +726,15 @@ function buildFormOptions(e){
   const es=new Set((e&&e.entidades)||[]);
   $("eChecks").innerHTML=ENTIDADES.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${es.has(n)?"checked":""}><span>${esc(n)}</span></label>`).join("");
 }
+function fillDetalle(g,cur,e){
+  const sel=$("f_tipo");
+  if(!g){ sel.innerHTML='<option value="">Primero elija el tipo de emergencia</option>'; sel.value=""; return; }
+  const ts=items("tipos").filter(t=>t.grupo===g&&(t.activo!==false||t.codigo===cur));
+  sel.innerHTML='<option value="">Seleccione el detalle…</option>'+ts.map(t=>`<option value="${esc(t.codigo)}">${esc(t.nombre)}</option>`).join("");
+  if(cur&&!ts.some(t=>t.codigo===cur)&&tipoOf(cur,e)&&tipoOf(cur,e).grupo===g) sel.insertAdjacentHTML("beforeend",`<option value="${esc(cur)}">${esc(tipoOf(cur,e).nombre)}</option>`);
+  sel.value=cur&&[...sel.options].some(o=>o.value===cur)?cur:"";
+}
+$("f_cat").addEventListener("change",()=>{ fillDetalle($("f_cat").value,"",EDIT_DOC); liveVal(); });
 function renderVRows(){
   const vs=items("vehiculos");
   $("vRows").innerHTML=VROWS.length?VROWS.map((r,i)=>{
@@ -828,8 +861,8 @@ function renderResumen(){
   const bySec={}; val.forEach(e=>{ const s=e.sector||"(sin barrio/vereda)"; bySec[s]=(bySec[s]||0)+1; }); const secs=Object.entries(bySec).sort((a,b)=>b[1]-a[1]).slice(0,10);
   body.innerHTML=`<div class="kpis">${kp("Emergencias atendidas",val.length,`${val.filter(e=>e.estado==="cerrada").length} cerradas · ${val.filter(e=>e.estado==="abierta").length} abiertas`)}${kp("Anuladas",an,"excluidas de los totales")}${kp("Respuesta promedio",avg==null?"—":avg+" min",resp.length+" con hora de llegada")}${kp("Respuesta mediana",med==null?"—":med+" min","")}${kp("Km recorridos",km.toLocaleString("es-CO"),"vehículos con km completo")}</div>
   <div class="two">
-    <div class="card"><h3>Por tipo de emergencia</h3><div class="scroll"><table class="t"><thead><tr><th>Grupo</th><th>Tipo</th><th class="r">N°</th><th class="r">%</th><th></th></tr></thead><tbody>${rowsT.map(([k,c])=>{ const [g,n]=k.split("|"); return `<tr><td>${esc(g)}</td><td>${esc(n)}</td><td class="r mono">${c}</td><td class="r mono">${(c/val.length*100).toFixed(1)}</td><td style="width:30%"><div class="hbar"><i style="width:${c/maxT*100}%"></i></div></td></tr>`; }).join("")}</tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="r mono"><b>${val.length}</b></td><td class="r mono">${val.length?"100.0":"—"}</td><td></td></tr></tfoot></table></div>
-    <p class="note">Por grupo: ${Object.entries(byG).map(([g,c])=>esc(g)+" "+c).join(" · ")}</p></div>
+    <div class="card"><h3>Por tipo y detalle del evento</h3><div class="scroll"><table class="t"><thead><tr><th>Tipo de emergencia</th><th>Detalle del evento</th><th class="r">N°</th><th class="r">%</th><th></th></tr></thead><tbody>${rowsT.map(([k,c])=>{ const [g,n]=k.split("|"); return `<tr><td>${esc(g)}</td><td>${esc(n)}</td><td class="r mono">${c}</td><td class="r mono">${(c/val.length*100).toFixed(1)}</td><td style="width:30%"><div class="hbar"><i style="width:${c/maxT*100}%"></i></div></td></tr>`; }).join("")}</tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="r mono"><b>${val.length}</b></td><td class="r mono">${val.length?"100.0":"—"}</td><td></td></tr></tfoot></table></div>
+    <p class="note">Por tipo de emergencia: ${Object.entries(byG).map(([g,c])=>esc(g)+" "+c).join(" · ")}</p></div>
     <div class="stack">${mesHTML}
       <div class="card"><h3>Afectación y consumos</h3><dl class="kv">${AFECT.map(([k,l])=>`<div><dt>${l}</dt><dd class="mono">${aT[k].toLocaleString("es-CO")}</dd></div>`).join("")}<div><dt>Agua (gal)</dt><dd class="mono">${agua.toLocaleString("es-CO")}</dd></div><div><dt>Espuma (gal)</dt><dd class="mono">${esp.toLocaleString("es-CO")}</dd></div></dl></div>
       <div class="card"><h3>Barrios y veredas con más servicios</h3><table class="t"><tbody>${secs.map(([s,c])=>`<tr><td>${esc(s)}</td><td class="r mono">${c}</td></tr>`).join("")}</tbody></table></div>
@@ -843,7 +876,7 @@ $("rAnio").addEventListener("change",renderResumen); $("rMes").addEventListener(
 const CATS={
   personal:{t:"Personal",n:"Bomberos y personal que participa en las emergencias. No se borran: se desactivan, para conservar la trazabilidad. Datos personales tratados conforme a la Ley 1581 de 2012.",cols:[["documento","Documento"],["nombre","Nombre completo"],["cargo","Cargo / rango"]],key:"documento",idp:"p_"},
   vehiculos:{t:"Vehículos",n:"Máquinas y vehículos de la institución.",cols:[["codigo","Código / nombre"],["tipo","Tipo"],["placa","Placa"]],key:"codigo",idp:"v_"},
-  tipos:{t:"Tipos de emergencia",n:"Tipología sugerida, ajustable. El código no se puede cambiar una vez creado, porque los reportes lo referencian.",cols:[["codigo","Código"],["nombre","Nombre"],["grupo","Grupo"]],key:"codigo",fixed:"codigo"},
+  tipos:{t:"Tipos de emergencia",n:"Cada fila es un «detalle del evento» dentro de un «tipo de emergencia». El código no se puede cambiar una vez creado, porque los reportes lo referencian.",cols:[["codigo","Código"],["nombre","Detalle del evento"],["grupo","Tipo de emergencia"]],key:"codigo",fixed:"codigo"},
   sectores:{t:"Barrios y veredas",n:"Lista de apoyo para el campo «Barrio / vereda». El formulario también acepta texto libre.",cols:[["nombre","Nombre"],["zona","Zona (Urbana/Rural)"]],key:"nombre",idp:"s_"}
 };
 function renderCat(){
@@ -855,19 +888,62 @@ function renderCat(){
     ${ro?"":'<div class="bar" style="justify-content:flex-end;margin-top:10px"><button class="btn primary" id="g_save">Guardar datos generales</button></div>'}</div>`;
   for(const [k,c] of Object.entries(CATS)){
     const rows=CAT_DRAFT[k]||items(k).map(x=>({...x,_old:true}));
-    h+=`<div class="card"><div class="bar" style="margin-bottom:6px"><h2 class="sec grow" style="margin:0">${c.t} <span class="note mono">(${items(k).filter(x=>x.activo!==false).length} activos)</span></h2>${k==="personal"&&!ro?'<label class="btn">Importar desde Excel<input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden></label>':''}</div><p class="note">${c.n}</p>
-    ${k==="personal"&&IMPORT?importHTML():""}
+    h+=`<div class="card"><div class="bar" style="margin-bottom:6px"><h2 class="sec grow" style="margin:0">${c.t} <span class="note mono">(${items(k).filter(x=>x.activo!==false).length} activos)</span></h2>${k==="tipos"&&!ro?'<button class="btn" id="tipSyrap">Cargar tipología de 6 categorías (60 tipos)</button>':''}${k==="personal"&&!ro?'<label class="btn">Importar desde Excel<input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden></label>':''}${k==="vehiculos"&&!ro?'<label class="btn">Importar desde Excel<input type="file" id="impVehFile" accept=".xlsx,.xls,.csv" hidden></label>':''}</div><p class="note">${c.n}</p>
+    ${k==="personal"&&IMPORT?importHTML():""}${k==="vehiculos"&&VIMPORT?vimportHTML():""}
     <div class="scroll" style="margin-top:8px"><table class="t cat-t"><thead><tr>${c.cols.map(x=>`<th>${x[1]}</th>`).join("")}<th>Activo</th></tr></thead><tbody>${rows.length?rows.map((r,i)=>`<tr data-c="${k}" data-i="${i}">${c.cols.map(([f])=>`<td><input data-f="${f}" value="${esc(r[f]||"")}" ${ro||(c.fixed===f&&r._old)?"disabled":""}></td>`).join("")}<td><input type="checkbox" data-f="activo" ${r.activo!==false?"checked":""} ${ro?"disabled":""}></td></tr>`).join(""):`<tr><td colspan="${c.cols.length+1}" class="note">Sin registros.</td></tr>`}</tbody></table></div>
     ${ro?"":`<div class="bar" style="margin-top:10px"><button class="btn" data-add="${k}">Agregar fila</button><span class="grow"></span>${CAT_DRAFT[k]?`<button class="btn ghost" data-undo="${k}">Descartar</button>`:""}<button class="btn primary" data-save="${k}" ${CAT_DRAFT[k]?"":"disabled"}>Guardar ${c.t.toLowerCase()}</button></div>`}</div>`;
   }
   b.innerHTML=h;
   const f=$("impFile"); if(f) f.onchange=leerImport;
+  const fv=$("impVehFile"); if(fv) fv.onchange=leerImportVeh;
 }
 function importHTML(){
   const n=IMPORT.filter(r=>r.estado==="nuevo").length;
   return `<div class="val" style="margin-top:10px"><b>Vista previa de la importación</b> <span class="note">(${IMPORT.length} personas en el archivo: ${n} nuevas)</span>
   <div class="scroll" style="margin-top:6px"><table class="t"><thead><tr><th>Fila</th><th>Documento</th><th>Nombre</th><th>Resultado</th></tr></thead><tbody>${IMPORT.map(r=>`<tr><td class="mono">${esc(r.filas.join(", "))}</td><td class="mono">${esc(r.documento)}</td><td>${esc(r.nombre)}${r.original!==r.nombre?`<div class="note" style="margin:0">En el archivo: ${esc(r.original)}</div>`:""}</td><td class="${r.estado==="nuevo"?"imp-new":r.estado==="existe"?"imp-old":"imp-dup"}">${esc(r.msg)}</td></tr>`).join("")}</tbody></table></div>
   <div class="bar" style="margin-top:8px;justify-content:flex-end"><button class="btn ghost" id="impNo">Cancelar</button><button class="btn primary" id="impYes" ${n?"":"disabled"}>Importar ${n} persona(s) nueva(s)</button></div></div>`;
+}
+/* ---------- importación de vehículos desde Excel ---------- */
+function vimportHTML(){
+  const n=VIMPORT.filter(r=>r.estado==="nuevo").length;
+  return `<div class="val" style="margin-top:10px"><b>Vista previa de la importación</b> <span class="note">(${VIMPORT.length} vehículos en el archivo: ${n} nuevos)</span>
+  <div class="scroll" style="margin-top:6px"><table class="t"><thead><tr><th>Fila</th><th>Código</th><th>Tipo</th><th>Placa</th><th>Activo</th><th>Resultado</th></tr></thead><tbody>${VIMPORT.map(r=>`<tr><td class="mono">${r.fila}</td><td class="mono">${esc(r.codigo||"—")}</td><td>${esc(r.tipo)}</td><td class="mono">${esc(r.placa)}${r.placaOrig&&r.placaOrig!==r.placa?`<div class="note" style="margin:0">En el archivo: ${esc(r.placaOrig)}</div>`:""}</td><td>${r.activo?"Sí":"No"}</td><td class="${r.estado==="nuevo"?"imp-new":r.estado==="existe"?"imp-old":"imp-dup"}">${esc(r.msg)}</td></tr>`).join("")}</tbody></table></div>
+  <div class="bar" style="margin-top:8px;justify-content:flex-end"><button class="btn ghost" id="vImpNo">Cancelar</button><button class="btn primary" id="vImpYes" ${n?"":"disabled"}>Importar ${n} vehículo(s) nuevo(s)</button></div></div>`;
+}
+async function leerImportVeh(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  if(CAT_DRAFT.vehiculos){ toast("Guarde o descarte primero los cambios pendientes en Vehículos."); ev.target.value=""; return; }
+  try{
+    const wb=XLSX.read(await file.arrayBuffer(),{type:"array"}); const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:"",blankrows:true});
+    const r0=XLSX.utils.decode_range(ws["!ref"]||"A1").s.r;
+    let h=-1,iC=-1,iT=-1,iP=-1,iA=-1;
+    for(let r=0;r<Math.min(rows.length,15)&&h<0;r++){
+      let c=-1,tp=-1,pl=-1,a=-1;
+      (rows[r]||[]).map(x=>String(x).trim().toLowerCase()).forEach((x,i)=>{ if(c<0&&/c[oó]digo/.test(x)) c=i; else if(tp<0&&/^tipo/.test(x)) tp=i; else if(pl<0&&/^placa/.test(x)) pl=i; else if(a<0&&/^activ/.test(x)) a=i; });
+      if(c>=0&&(tp>=0||pl>=0)){ h=r; iC=c; iT=tp; iP=pl; iA=a; }
+    }
+    if(h<0){ toast("No se encontró la fila de encabezados: debe tener al menos «Código» y «Tipo» o «Placa»."); ev.target.value=""; return; }
+    const ex=items("vehiculos"); const exCod=new Set(ex.map(v=>String(v.codigo||"").trim().toLowerCase())); const exPla=new Set(ex.map(v=>String(v.placa||"").toUpperCase().replace(/[\s.-]/g,"")).filter(Boolean));
+    const seenC=new Map(), seenP=new Map(), out=[];
+    for(let r=h+1;r<rows.length;r++){
+      const row=rows[r]||[]; if(!row.some(x=>String(x).trim())) break;
+      const fila=r+r0+1, cod=String(row[iC]||"").replace(/\s+/g," ").trim(), tipo=iT>=0?String(row[iT]||"").replace(/\s+/g," ").trim():"";
+      const placaOrig=iP>=0?String(row[iP]||"").trim():"", placa=placaOrig.toUpperCase().replace(/[\s.-]/g,"");
+      const activo=!/^(no|n|false|falso|0|inactivo)$/.test(iA>=0?String(row[iA]||"").trim().toLowerCase():"");
+      const o={fila,codigo:cod,tipo,placa,placaOrig,activo}, kc=cod.toLowerCase();
+      if(!cod){ o.estado="error"; o.msg="Sin código: no se importa. Asígnele un código en el archivo."; }
+      else if(seenC.has(kc)){ o.estado="error"; o.msg=`Código repetido en el archivo (fila ${seenC.get(kc)}): no se importa`; }
+      else if(exCod.has(kc)){ o.estado="existe"; o.msg="Ya existe en el catálogo: no se modifica"; }
+      else if(placa&&seenP.has(placa)){ o.estado="error"; o.msg=`Placa repetida en el archivo (fila ${seenP.get(placa)}): no se importa`; }
+      else if(placa&&exPla.has(placa)){ o.estado="error"; o.msg="La placa ya está registrada con otro código: no se importa"; }
+      else { o.estado="nuevo"; o.msg="Nuevo"; }
+      if(cod&&!seenC.has(kc)) seenC.set(kc,fila); if(placa&&!seenP.has(placa)) seenP.set(placa,fila);
+      out.push(o);
+    }
+    if(!out.length){ toast("El archivo no tiene vehículos debajo de los encabezados."); ev.target.value=""; return; }
+    VIMPORT=out; VIMPORT.archivo=file.name; renderCat();
+  }catch(e){ toast("No se pudo leer el archivo: "+(e.message||e)); }
 }
 async function leerImport(ev){
   const file=ev.target.files[0]; if(!file) return;
@@ -891,16 +967,40 @@ async function leerImport(ev){
       const o={filas:[fila],documento:doc,nombre,original:orig,cargo:String(cargo||"").trim(),estado:ex?"existe":"nuevo",msg:ex?`Ya existe como «${ex.nombre}»: no se modifica`:"Nuevo"};
       map.set(doc,o); out.push(o);
     });
-    IMPORT=out; renderCat();
+    IMPORT=out; render();
   }catch(e){ toast("No se pudo leer el archivo: "+(e.message||e)); }
 }
 $("catBody").addEventListener("input",ev=>{ const tr=ev.target.closest("tr[data-c]"); if(!tr) return; const k=tr.dataset.c; if(!CAT_DRAFT[k]) CAT_DRAFT[k]=items(k).map(x=>({...x,_old:true})); const r=CAT_DRAFT[k][+tr.dataset.i]; const f=ev.target.dataset.f; r[f]=f==="activo"?ev.target.checked:ev.target.value; const sb=document.querySelector(`[data-save="${k}"]`); if(sb) sb.disabled=false; });
+async function importarAccion(t){
+  if(t.id==="impNo"){ IMPORT=null; render(); return; }
+  const nuevos=IMPORT.filter(r=>r.estado==="nuevo"); t.disabled=true;
+  try{ for(let i=0;i<nuevos.length;i+=400){ const b=db.batch(); nuevos.slice(i,i+400).forEach(r=>b.set(db.collection("personal").doc(uid("p_")),{documento:r.documento,nombre:r.nombre,cargo:r.cargo||"",activo:true,creadoEn:sts(),actualizadoPor:UID})); b.set(db.collection("auditoria_admin").doc(),{uid:UID,ts:sts(),accion:"Importación de personal",detalle:nuevos.length+" personas desde Excel"}); await b.commit(); }
+    toast(nuevos.length+" persona(s) importada(s)."); IMPORT=null; BULK_SEL=null; render(); }catch(e){ toast(errMsg(e)); t.disabled=false; }
+}
 $("catBody").addEventListener("click",async ev=>{
   const t=ev.target;
-  if(t.id==="impNo"){ IMPORT=null; renderCat(); return; }
-  if(t.id==="impYes"){ const nuevos=IMPORT.filter(r=>r.estado==="nuevo"); t.disabled=true;
-    try{ for(let i=0;i<nuevos.length;i+=400){ const b=db.batch(); nuevos.slice(i,i+400).forEach(r=>b.set(db.collection("personal").doc(uid("p_")),{documento:r.documento,nombre:r.nombre,cargo:r.cargo||"",activo:true,creadoEn:sts(),actualizadoPor:UID})); b.set(db.collection("auditoria_admin").doc(),{uid:UID,ts:sts(),accion:"Importación de personal",detalle:`${nuevos.length} personas desde ${$("impFile")&&$("impFile").files[0]?$("impFile").files[0].name:"Excel"}`}); await b.commit(); }
-      toast(nuevos.length+" persona(s) importada(s)."); IMPORT=null; renderCat(); }catch(e){ toast(errMsg(e)); t.disabled=false; } return; }
+  if(t.id==="impNo"||t.id==="impYes"){ await importarAccion(t); return; }
+  if(t.id==="vImpNo"){ VIMPORT=null; renderCat(); return; }
+  if(t.id==="vImpYes"){ const nuevos=VIMPORT.filter(r=>r.estado==="nuevo"); if(!nuevos.length) return;
+    if(CAT_DRAFT.vehiculos){ toast("Guarde o descarte primero los cambios pendientes en Vehículos."); return; }
+    t.disabled=true;
+    try{
+      const lista=items("vehiculos").map(x=>({...x})).concat(nuevos.map(r=>({id:uid("v_"),codigo:r.codigo,tipo:r.tipo,placa:r.placa,activo:r.activo})));
+      const b=db.batch();
+      b.set(db.collection("cfg").doc("vehiculos"),{items:lista,actualizadoEn:sts(),actualizadoPor:UID});
+      b.set(db.collection("auditoria_admin").doc(),{uid:UID,ts:sts(),accion:"Importación de vehículos",detalle:`${nuevos.length} vehículo(s) desde ${VIMPORT.archivo||"Excel"}: ${nuevos.map(r=>r.codigo+(r.placa?" ("+r.placa+")":"")).join(", ")}`});
+      await b.commit(); toast(nuevos.length+" vehículo(s) importado(s)."); VIMPORT=null; renderCat();
+    }catch(e){ toast(errMsg(e)); t.disabled=false; }
+    return; }
+  if(t.id==="tipSyrap"){
+    const usados=new Set(EMERG.map(e=>e.tipo).filter(Boolean)); const nuevos=TIPOS_SUGERIDOS.map(([codigo,nombre,grupo])=>({codigo,nombre,grupo,activo:true}));
+    const viejos=items("tipos").filter(o=>!nuevos.some(n=>n.codigo===o.codigo));
+    const conservar=viejos.filter(o=>usados.has(o.codigo)).map(o=>({...o,activo:false}));
+    const ok=await modal({title:"Reemplazar tipos de emergencia",text:`Se cargan ${nuevos.length} tipos en 6 categorías. De los ${viejos.length} tipos anteriores, ${conservar.length} se usan en reportes ya registrados y quedan desactivados (no se borran, para no perder la clasificación de esos reportes); los demás se retiran del catálogo.`,yes:"Reemplazar"});
+    if(!ok) return;
+    try{ const b=db.batch(); b.set(db.collection("cfg").doc("tipos"),{items:[...nuevos,...conservar],actualizadoEn:sts(),actualizadoPor:UID}); b.set(db.collection("auditoria_admin").doc(),{uid:UID,ts:sts(),accion:"Catálogo",detalle:`Tipología reemplazada: ${nuevos.length} tipos nuevos, ${conservar.length} anteriores desactivados, ${viejos.length-conservar.length} retirados sin uso`}); await b.commit(); delete CAT_DRAFT.tipos; toast("Tipos de emergencia actualizados."); fillTipoFilter(); renderCat(); }catch(e){ toast(errMsg(e)); }
+    return;
+  }
   if(t.id==="g_save"){ try{ await db.collection("cfg").doc("general").set({institucion:$("g_inst").value.trim(),municipio:$("g_mun").value.trim(),departamento:$("g_dep").value.trim(),actualizadoEn:sts(),actualizadoPor:UID}); toast("Datos generales guardados."); }catch(e){ toast(errMsg(e)); } return; }
   if(t.dataset.add){ const k=t.dataset.add; if(!CAT_DRAFT[k]) CAT_DRAFT[k]=items(k).map(x=>({...x,_old:true})); CAT_DRAFT[k].push({activo:true}); renderCat(); return; }
   if(t.dataset.undo){ delete CAT_DRAFT[t.dataset.undo]; renderCat(); return; }
@@ -928,12 +1028,13 @@ function personalSinUsuario(){ const act=new Set(USERS.filter(u=>u.activo).map(u
 function renderUsers(){
   if(!isAdmin()){ $("usersBody").innerHTML=""; return; }
   const pend=personalSinUsuario(); if(!BULK_SEL) BULK_SEL=new Set(pend.map(p=>p.id));
-  $("usersBody").innerHTML=`<div class="card"><h2 class="sec">Crear accesos con cédula</h2>
+  $("usersBody").innerHTML=`<div class="card"><div class="bar" style="margin-bottom:6px"><h2 class="sec grow" style="margin:0">Crear accesos con cédula</h2><label class="btn">Importar personal desde Excel<input type="file" id="impFile2" accept=".xlsx,.xls,.csv" hidden></label></div>
     <p class="note">Cada persona entra con su número de cédula. La contraseña inicial también es la cédula, y en el primer ingreso la herramienta la obliga a crear una propia. Mientras no la cambie, no puede ver ni registrar nada.</p>
+    ${IMPORT?importHTML():""}
     ${pend.length?`<div class="bar" style="margin:10px 0"><label class="f">Rol para los seleccionados<select id="bkRol"><option value="operador">Operador</option><option value="consulta">Consulta</option><option value="admin">Administrador</option></select></label><span class="grow"></span><button class="btn ghost" id="bkAll">Marcar todos</button><button class="btn ghost" id="bkNone">Desmarcar todos</button></div>
     <div class="checks" id="bkList">${pend.map(p=>`<label><input type="checkbox" value="${esc(p.id)}" ${BULK_SEL.has(p.id)?"checked":""}><span>${esc(p.nombre)}<br><small class="mono">${esc(p.documento)}${String(p.documento).length<6?" · cédula de menos de 6 dígitos: no admitida":""}</small></span></label>`).join("")}</div>
     <div class="err" id="bkErr" style="margin-top:6px"></div>
-    <div class="bar" style="justify-content:flex-end"><button class="btn primary" id="bkBtn">Crear accesos seleccionados</button></div>`:'<p class="note" style="margin-top:8px"><b>Todo el personal activo ya tiene acceso.</b> Si agrega personas en Catálogos, aparecerán aquí.</p>'}
+    <div class="bar" style="justify-content:flex-end"><button class="btn primary" id="bkBtn">Crear accesos seleccionados</button></div>`:(PERSONAL.length?'<p class="note" style="margin-top:8px"><b>Todo el personal activo ya tiene acceso.</b> Si agrega personas en Catálogos, aparecerán aquí.</p>':'<div class="banner" style="margin:10px 0 0"><b>Todavía no hay personal registrado.</b> Suba el Excel del personal (nombre y cédula) con el botón de abajo. Las personas quedan en el catálogo y aparecen aquí para crearles el acceso.</div>')}
   </div>
   <div class="card"><h2 class="sec">Crear usuario con correo</h2>
     <p class="note">Para administradores o personas que no están en el catálogo de personal. Pueden recuperar su contraseña por correo.</p>
@@ -948,12 +1049,15 @@ function renderUsers(){
   <div class="card"><h2 class="sec">Usuarios (${USERS.filter(u=>u.activo).length} activos)</h2>
     <p class="note"><b>Administrador:</b> catálogos, usuarios, editar cerrados, reabrir y anular. <b>Operador:</b> crea, edita y cierra reportes abiertos. <b>Consulta:</b> solo ve. Los usuarios no se borran: se desactivan.</p>
     <div class="scroll" style="margin-top:8px"><table class="t cat-t"><thead><tr><th>Nombre</th><th>Ingresa con</th><th>Rol</th><th>Activo</th><th>Contraseña</th><th></th></tr></thead><tbody>${USERS.map(u=>{ const a=accesoDe(u); return `<tr data-u="${esc(u.id)}" ${u.activo?"":'style="opacity:.6"'}><td><input data-f="nombre" value="${esc(u.nombre||"")}"></td><td class="mono">${esc(a.v)}<div class="note" style="margin:0">${a.t==="cedula"?"cédula":"correo"}</div></td><td><select data-f="rol" ${u.id===UID?"disabled":""}>${["admin","operador","consulta"].map(r=>`<option value="${r}" ${u.rol===r?"selected":""}>${ROL_LBL[r]}</option>`).join("")}</select></td><td><input type="checkbox" data-f="activo" ${u.activo?"checked":""} ${u.id===UID?"disabled":""}></td><td>${u.debeCambiarClave?'<span class="flag">Pendiente primer cambio</span>':'<span class="note" style="margin:0">Propia</span>'}</td><td style="white-space:nowrap"><button class="btn" data-us="save">Guardar</button> ${a.t==="correo"?'<button class="btn ghost" data-us="reset">Enviar enlace de contraseña</button>':(u.id!==UID&&u.activo?'<button class="btn ghost" data-us="olvido">Olvidó la contraseña</button>':"")}</td></tr>`; }).join("")}</tbody></table></div></div>`;
+  hookUsers();
 }
+function hookUsers(){ const f=$("impFile2"); if(f) f.onchange=leerImport; }
 function tempPass(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"; let s=""; const a=new Uint32Array(10); crypto.getRandomValues(a); a.forEach(x=>s+=c[x%c.length]); return s; }
 async function crearCuenta(email,pass){ if(!secApp) secApp=firebase.initializeApp(FIREBASE_CONFIG,"secundaria"); const cred=await secApp.auth().createUserWithEmailAndPassword(email,pass); const id=cred.user.uid; await secApp.auth().signOut(); return id; }
 $("usersBody").addEventListener("change",ev=>{ if(ev.target.closest("#bkList")){ const id=ev.target.value; ev.target.checked?BULK_SEL.add(id):BULK_SEL.delete(id); } });
 $("usersBody").addEventListener("click",async ev=>{
   const t=ev.target;
+  if(t.id==="impNo"||t.id==="impYes"){ await importarAccion(t); return; }
   if(t.id==="bkAll"){ BULK_SEL=new Set(personalSinUsuario().map(p=>p.id)); renderUsers(); return; }
   if(t.id==="bkNone"){ BULK_SEL=new Set(); renderUsers(); return; }
   if(t.id==="bkBtn"){
@@ -1022,7 +1126,7 @@ $("btnXls").onclick=()=>{
   const wb=XLSX.utils.book_new(); const enc=XLSX.utils.encode_cell;
   const mk=(rows)=>{ const ws={}; let maxC=0; rows.forEach((r,R)=>{ r.forEach((v,C)=>{ if(v==null||v==="") return; maxC=Math.max(maxC,C); ws[enc({r:R,c:C})]=(typeof v==="object")?v:(typeof v==="number"?{t:"n",v}:{t:"s",v:String(v)}); }); }); ws["!ref"]=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length-1,c:maxC}}); return ws; };
   const dt=s=>{ const v=xlSerial(s); return v==null?null:{t:"n",v,z:"yyyy-mm-dd hh:mm"}; };
-  const H=["Número","Estado","Fecha aviso","Medio","Código tipo","Tipo","Grupo","Detalle","Zona","Barrio/vereda","Dirección","Municipio","Salida","Llegada","Controlada","Regreso","Min despacho","Min respuesta","Min atención","Min total","Comandante","N° personal","Vehículos","Lesionados","Fallecidos","Rescatados","Evacuados","Familias","Viviendas","Área m²","Agua gal","Espuma gal","Entidades apoyo","Situación encontrada","Acciones","Observaciones","Motivo anulación","Creado","Última modificación","Versión"];
+  const H=["Número","Estado","Fecha aviso","Medio","Código","Detalle del evento","Tipo de emergencia","Nota adicional","Zona","Barrio/vereda","Dirección","Municipio","Salida","Llegada","Controlada","Regreso","Min despacho","Min respuesta","Min atención","Min total","Comandante","N° personal","Vehículos","Lesionados","Fallecidos","Rescatados","Evacuados","Familias","Viviendas","Área m²","Agua gal","Espuma gal","Entidades apoyo","Situación encontrada","Acciones","Observaciones","Motivo anulación","Creado","Última modificación","Versión"];
   const rows=[H];
   L.forEach((e,i)=>{ const r=i+2, t=tipoOf(e.tipo,e)||{}, a=e.afect||{};
     const f=(x,y)=>({t:"n",f:`IF(AND(ISNUMBER(${y}${r}),ISNUMBER(${x}${r})),ROUND((${y}${r}-${x}${r})*1440,0),"")`,z:"0"});
@@ -1036,7 +1140,7 @@ $("btnXls").onclick=()=>{
   const vr=[["Número","Vehículo","Conductor","Km inicial","Km final","Km recorridos"]]; L.forEach(e=>(e.vehiculos||[]).filter(v=>v.v).forEach(v=>{ const r=vr.length+1; vr.push([e.numero,vehName(v.v,e),v.conductor?perName(v.conductor,e):"",v.kmIni,v.kmFin,{t:"n",f:`IF(AND(ISNUMBER(D${r}),ISNUMBER(E${r})),E${r}-D${r},"")`}]); }));
   XLSX.utils.book_append_sheet(wb,mk(vr),"Vehiculos");
   const codes=[...new Set(L.map(e=>e.tipo).filter(Boolean))].sort(); const n=rows.length;
-  const rs=[["Código","Tipo","Grupo","Atendidas (sin anuladas)","Respuesta promedio (min)"]];
+  const rs=[["Código","Detalle del evento","Tipo de emergencia","Atendidas (sin anuladas)","Respuesta promedio (min)"]];
   codes.forEach(c=>{ const r=rs.length+1, t=tipoOf(c)||{}; rs.push([c,t.nombre||c,t.grupo||"",{t:"n",f:`COUNTIFS(Emergencias!$E$2:$E$${n},A${r},Emergencias!$B$2:$B$${n},"<>Anulada")`},{t:"n",f:`IFERROR(ROUND(AVERAGEIFS(Emergencias!$R$2:$R$${n},Emergencias!$E$2:$E$${n},A${r},Emergencias!$B$2:$B$${n},"<>Anulada"),0),"")`}]); });
   const last=rs.length; rs.push(["","Total atendidas","",{t:"n",f:`SUM(D2:D${last})`},""]);
   rs.push(["","Anuladas","",{t:"n",f:`COUNTIF(Emergencias!$B$2:$B$${n},"Anulada")`},""]);
